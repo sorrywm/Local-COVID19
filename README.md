@@ -56,7 +56,7 @@
   
   - Filename: https://nuedukz-my.sharepoint.com/:f:/g/personal/mzhumabay_nu_edu_kz/ElTKHLQ7LItItIVhI4fGISwBevgI_AlkCEupUgQEqmvSZw?e=m7pma0
   
-  (please, use this link to find a csv file)
+  (please, use this link to find a csv file and download it)
   
   - Source: https://data.nber.org/data/census-intercensal-county-population-age-sex-race-hispanic.html
   
