@@ -43,4 +43,21 @@
 
   - Data description: Time series of deaths by US county (admin2 column); each date-labeled column is the number of new COVID-19-attributed deaths reported on that date.
   
+  ### 7) Census data:
+  
+  - County Population Estimates
+  
+  - Filename: CO-EST2015-alldata.csv
+  
+  - Source: https://data.world/nrippner/us-population-estimates-2015/workspace/file?filename=CO-EST2015-alldata.pdf
+  
+  
+  - Census U.S. Intercensal County Population Data by Age, Sex, Race, and Hispanic Origin
+  
+  - Filename: https://nuedukz-my.sharepoint.com/:f:/g/personal/mzhumabay_nu_edu_kz/ElTKHLQ7LItItIVhI4fGISwBevgI_AlkCEupUgQEqmvSZw?e=m7pma0
+  
+  (please, use this link to find a csv file)
+  
+  - Source: https://data.nber.org/data/census-intercensal-county-population-age-sex-race-hispanic.html
+  
 
