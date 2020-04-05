@@ -56,49 +56,89 @@ names(ICUbeds)[1]="FIPS"
 full_data<-merge(data_county_us,ICUbeds[,c("FIPS","all_icu","Total_pop","60plus")], on=("FIPS"),all.x = T)
 full_data<-as.data.table(full_data)
 full_data<-full_data[,c("time_f1","time_f2"):=NULL]
+full_data<-full_data[order(full_data$time),]
 #epidemic modelling in one county test
 
-name=sample(full_data$FIPS,1)
-dt=full_data[FIPS==name,]
-days=length(dt$Confirmed)
-pop=dt[1,]$Total_pop
-pop60=dt[1,]$`60plus`
+county=sample(full_data$FIPS,1)
 
-detection_rate=0.3
-infprob=0.01
-disease_duration=15
 
-params=param.dcm(
-  inf.prob = infprob,
-  #inter.eff=0.3,
-  #inter.start=1
-  act.rate=30,
-  rec.rate=1/disease_duration,
-  a.rate=0,
-  ds.rate = 0,
-  di.rate = 0,
-  dr.rate =0
-  )
-init=init.dcm(
-  s.num=pop,
-  i.num=1,
-  r.num=0)
-#  s.num.g2=pop60,
-#  i.num.g2=0,
-#  r.num.g2=0
 
-control=control.dcm(
-  type="SIR",
-  nsteps=30
-)
+model_L2<-function(county, detection_rate, inf_prob, disease_duration){
   
-model=dcm(params,init, control)
-infected=model$epi$i.num
-infected_avg_detected=infected*detection_rate
-l_overlap=which(infected_avg_detected>1)[1:days]
+  dt=full_data[FIPS==county,]
+  days=length(dt$Confirmed)
+  pop=dt[1,]$Total_pop
+  pop60=dt[1,]$`60plus`
+  
+  
+  params=param.dcm(
+    inf.prob = inf_prob,
+    #inter.eff=0.3,
+    #inter.start=1
+    act.rate=30,
+    rec.rate=1-0/disease_duration,
+    a.rate=0,
+    ds.rate = 0,
+    di.rate = 0,
+    dr.rate =0
+    )
+  init=init.dcm(
+    s.num=pop,
+    i.num=1,
+    r.num=0)
+  #  s.num.g2=pop60,
+  #  i.num.g2=0,
+  #  r.num.g2=0
+  
+  control=control.dcm(
+    type="SIR",
+    nsteps=30
+  )
+    
+  model=dcm(params,init, control)
+  infected=model$epi$i.num
+  infected_avg_detected=infected*detection_rate
+  l_overlap=which(infected_avg_detected>1)[1:days]
+  L2<-sum((dt$Confirmed-infected_avg_detected[l_overlap,])^2)
+  model<-NULL
+  return(L2)
+}
+eps1=0.05
+detection_rate=1:5 *eps1
+eps2=0.005
+inf_prob=1:10*eps2
+eps3=1
+disease_duration=15*1
 
-
-
-
-
+fitmodel_count_imp_sampling<-function(county, detection_rate,inf_prob,disease_duration,eps1,eps2,eps3,n){
+  
+   for(i in 1:n){
+    
+     invL2matrix<-lapply(detection_rate,function(x){lapply(inf_prob,function(y){lapply(disease_duration,function(z){data.frame("dt"=x,"inf_p"=y,"dur"=z,"inv_p"=1.0/(model_L2(county,x,y,z)^2))})})})
+     invL2matrix<-do.call(rbind,unlist(unlist(invL2matrix,recursive = F),recursive = F))
+     invL2matrix<-invL2matrix%>%na.omit
+     invL2matrix$prob<-invL2matrix$inv_p/sum(invL2matrix$inv_p)
+     # for(x in detection_rate){
+     #   for(y in inf_prob){
+     #     for(z in disease_duration){
+     #      print(c(x,y,z,1.0/model_L2(county,x,y,z)))
+     #     }
+     #   }
+     # }
+     row.names(invL2matrix)=1:length(invL2matrix$prob)
+     resampled<-sample(1:length(invL2matrix$prob), replace=T , prob=invL2matrix$prob)
+     newvals<-invL2matrix[resampled,]
+     newvals$dt_rs<-sapply(newvals$dt,function(x)runif(1,x-eps1,x+eps1))
+     newvals$infp_rs<-sapply(newvals$inf_p,function(x)runif(1,x-eps2,x+eps2))
+     newvals$dur_rs<-sapply(newvals$dur,function(x)sample(c(x,x-eps3,x+eps3),1))
+     eps1=eps1*0.95
+     eps2=eps2*0.95
+     eps3=eps3
+     detection_rate<-newvals$dt_rs
+     inf_prob<-newvals$infp_rs
+     disease_duration<-newvals$dur_rs
+    }
+  return(newvals)
+}
+fitm<-fitmodel_count_imp_sampling(county,detection_rate,inf_prob,disease_duration,eps1,eps2,eps3,5)
 
