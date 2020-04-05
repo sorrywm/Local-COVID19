@@ -60,4 +60,12 @@
   
   - Source: https://data.nber.org/data/census-intercensal-county-population-age-sex-race-hispanic.html
   
-
+  ### 10) Pollution information:
+  
+  - U.S. Air Pollution Data
+  
+  - Filename: us_pollution_polution_us_2000_2016 
+  
+  (please, use this link to find a csv file and download it:  https://nuedukz-my.sharepoint.com/:f:/g/personal/mzhumabay_nu_edu_kz/ElTKHLQ7LItItIVhI4fGISwBevgI_AlkCEupUgQEqmvSZw?e=m7pma0 )
+  
+  - Source: https://data.world/data-society/us-air-pollution-data
