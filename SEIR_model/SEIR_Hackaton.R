@@ -76,7 +76,7 @@ model_L2<-function(county, detection_rate, inf_prob, disease_duration){
     #inter.eff=0.3,
     #inter.start=1
     act.rate=30,
-    rec.rate=1-0/disease_duration,
+    rec.rate=1.0/disease_duration,
     a.rate=0,
     ds.rate = 0,
     di.rate = 0,
@@ -103,20 +103,61 @@ model_L2<-function(county, detection_rate, inf_prob, disease_duration){
   model<-NULL
   return(L2)
 }
-eps1=0.05
-detection_rate=1:5 *eps1
-eps2=0.005
-inf_prob=1:10*eps2
-eps3=1
-disease_duration=15*1
+
+modelSIR<-function(county, detection_rate, inf_prob, disease_duration){
+  
+  dt=full_data[FIPS==county,]
+  days=length(dt$Confirmed)
+  pop=dt[1,]$Total_pop
+  pop60=dt[1,]$`60plus`
+  
+  
+  params=param.dcm(
+    inf.prob = inf_prob,
+    #inter.eff=0.3,
+    #inter.start=1
+    act.rate=30,
+    rec.rate=1.0/disease_duration,
+    a.rate=0,
+    ds.rate = 0,
+    di.rate = 0,
+    dr.rate =0
+  )
+  init=init.dcm(
+    s.num=pop,
+    i.num=1,
+    r.num=0)
+  #  s.num.g2=pop60,
+  #  i.num.g2=0,
+  #  r.num.g2=0
+  
+  control=control.dcm(
+    type="SIR",
+    nsteps=30
+  )
+  
+  model=dcm(params,init, control)
+  infected=model$epi$i.num
+  infected_avg_detected=infected*detection_rate
+  l_overlap=which(infected_avg_detected>1)[1:days]
+  return(list("model"=model,"min_days"=min(l_overlap)))
+}
 
 fitmodel_count_imp_sampling<-function(county, detection_rate,inf_prob,disease_duration,eps1,eps2,eps3,n){
   
    for(i in 1:n){
+     print(paste0("iteration: ",i))
+     if(i==1){
+       invL2matrix<-lapply(detection_rate,function(x){lapply(inf_prob,function(y){lapply(disease_duration,function(z){data.frame("dt"=x,"inf_p"=y,"dur"=z,"inv_p"=1.0/(model_L2(county,x,y,z)^2))})})})
+       invL2matrix<-do.call(rbind,unlist(unlist(invL2matrix,recursive = F),recursive = F))
+       }
+      else{
+       invL2matrix<-lapply(1:250,function(x)data.frame("dt"=newvals[i,]$dt_rs,"inf_p"=newvals[i,]$infp_rs,"dur"=newvals[i,]$dur_rs,"inv_p"=1.0/(model_L2(county,newvals[i,]$dt_rs,newvals[i,]$infp_rs,newvals[i,]$dur_rs)^2)))
+       invL2matrix<-do.call(rbind,invL2matrix)
+       }
     
-     invL2matrix<-lapply(detection_rate,function(x){lapply(inf_prob,function(y){lapply(disease_duration,function(z){data.frame("dt"=x,"inf_p"=y,"dur"=z,"inv_p"=1.0/(model_L2(county,x,y,z)^2))})})})
-     invL2matrix<-do.call(rbind,unlist(unlist(invL2matrix,recursive = F),recursive = F))
      invL2matrix<-invL2matrix%>%na.omit
+     invL2matrix
      invL2matrix$prob<-invL2matrix$inv_p/sum(invL2matrix$inv_p)
      # for(x in detection_rate){
      #   for(y in inf_prob){
@@ -125,20 +166,38 @@ fitmodel_count_imp_sampling<-function(county, detection_rate,inf_prob,disease_du
      #     }
      #   }
      # }
-     row.names(invL2matrix)=1:length(invL2matrix$prob)
-     resampled<-sample(1:length(invL2matrix$prob), replace=T , prob=invL2matrix$prob)
-     newvals<-invL2matrix[resampled,]
+     
+     resampled<-sample(1:length(invL2matrix$prob), size =250, replace=T ,  prob=invL2matrix$prob)
+     row.names(newvals)
      newvals$dt_rs<-sapply(newvals$dt,function(x)runif(1,x-eps1,x+eps1))
      newvals$infp_rs<-sapply(newvals$inf_p,function(x)runif(1,x-eps2,x+eps2))
      newvals$dur_rs<-sapply(newvals$dur,function(x)sample(c(x,x-eps3,x+eps3),1))
      eps1=eps1*0.95
      eps2=eps2*0.95
      eps3=eps3
-     detection_rate<-newvals$dt_rs
-     inf_prob<-newvals$infp_rs
-     disease_duration<-newvals$dur_rs
+     # detection_rate<-newvals$dt_rs
+     # inf_prob<-newvals$infp_rs
+     # disease_duration<-newvals$dur_rs
     }
   return(newvals)
 }
-fitm<-fitmodel_count_imp_sampling(county,detection_rate,inf_prob,disease_duration,eps1,eps2,eps3,5)
+
+eps1=0.05
+detection_rate=1:5 *eps1
+eps2=0.005
+inf_prob=1:10*eps2
+eps3=1
+disease_duration=13+1:5*eps3
+
+fitm<-fitmodel_count_imp_sampling(county,detection_rate,inf_prob,disease_duration,eps1,eps2,eps3,20)
+
+detection_rate<-median(fitm$dt_rs)
+inf_prob<-median(fitm$infp_rs)
+disease_duration=median(fitm$dur_rs)
+m=modelSIR(county,detection_rate,inf_prob,disease_duration)
+
+
+plot(m$model$epi$i.num$run1*detection_rate)
+points(m$min_days:(m$min_days+length(full_data[FIPS==county,]$Confirmed)-1),full_data[FIPS==county,]$Confirmed,pch=0.9)
+length(m$model$epi$i.num$run1)
 
