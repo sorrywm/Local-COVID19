@@ -8,6 +8,9 @@ library(foreign)
 library(lubridate)
 
 # retrieve data and data prep
+# To do: modify the following to get the file from the Local-Covid19 repo
+localdir = "/Users/giancarlo/Documents/GitHub/Local-COVID19/"
+#localdir = "~/repos/Local-COVID19/"
 
 list_files_remote_git<-function(git_master, git_directory){
   req <- GET(paste0(git_master,"?recursive=1"))
@@ -49,7 +52,7 @@ dt_tmp2<-data_county_us[which(is.na(data_county_us$time_f2)),]
 dt_tmp2$time<-dt_tmp2$time_f1
 data_county_us<-rbind(dt_tmp1,dt_tmp2)
 
-ICUbeds=fread("/Users/giancarlo/Documents/GitHub/Local-COVID19/data/KHN_ICU_bed_county_analysis_2.csv", sep=",", header=T)
+ICUbeds=fread(paste(localdir,"data/KHN_ICU_bed_county_analysis_2.csv",sep=""), sep=",", header=T)
 names(ICUbeds)[1]="FIPS"
 
 full_data<-merge(data_county_us,ICUbeds[,c("FIPS","all_icu","Total_pop","60plus")], on=("FIPS"),all.x = T)
@@ -201,6 +204,11 @@ start_time=median(fitm$start_rs)
 m=modelSIR(county,detection_rate,inf_prob,disease_duration,start_time)
 
 
-plot(m$model$epi$i.num$run1*detection_rate,type="l")
-points(m$min_days:(m$min_days+length(full_data[FIPS==county,]$Confirmed)-1),full_data[FIPS==county,]$Confirmed,pch=1)
+
+plot(m$model$epi$i.num$run1*detection_rate, pch=20,col="darkblue",xlab="Days after XXX",ylab="Cases")
+points(m$min_days:(m$min_days+length(full_data[FIPS==county,]$Confirmed)-1),full_data[FIPS==county,]$Confirmed,
+       pch=19, col="turquoise")
+legend(topleft,legend=c("Predicted","Actual"),col=c("darkblue","turquoise"),pch=19)
+length(m$model$epi$i.num$run1)
+
 
